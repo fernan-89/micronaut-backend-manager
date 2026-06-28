@@ -26,6 +26,13 @@ out/
 **/build/
 **/out/
 
+# Bloqueios específicos para travar arquivos gerados em execução pelo Gradle Daemon
+.gradle/*
+*.lock
+*.probe
+.gradle/buildOutputCleanup/
+.gradle/file-system.probe
+
 # 💻 IDEs and Editors Configuration (IntelliJ IDEA, VS Code, Eclipse)
 # ------------------------------------------------------------------------------
 .idea/
