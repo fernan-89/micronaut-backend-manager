@@ -10,9 +10,592 @@ info:
     url: https://opensource.org/licenses/MIT
   version: "0.1"
 tags:
+- name: Asset Management
+  description: Operations related to corporate hardware asset lifecycle and inventory.
+- name: Compute Resource Management
+  description: Operations inventorying hardware and executing advanced lifecycle maintenance
+    protocols.
+- name: Maintenance Workflow
+  description: "Operations related to corporate hardware repair tickets, diagnostics,\
+    \ and lifecycle status logs."
+- name: Software License Management
+  description: "Operations managing corporate system keys, purchased software agreements,\
+    \ quotas, and structural asset allocations."
 - name: User Management
   description: Operations related to user management
 paths:
+  /assets:
+    get:
+      tags:
+      - Asset Management
+      summary: Search or list assets
+      description: Retrieves a list of assets filtered optionally by physical asset
+        tag or serial number.
+      operationId: listOrSearchAssets
+      parameters:
+      - name: assetTag
+        in: query
+        description: Filter by exact corporate asset tag
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: serialNumber
+        in: query
+        description: Filter by exact hardware serial number
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        "200":
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssetManagementResponse"
+    post:
+      tags:
+      - Asset Management
+      summary: Register a new asset
+      description: Creates a new hardware asset and initializes its centralized audit
+        trail.
+      operationId: createAsset
+      parameters:
+      - name: X-Executor
+        in: header
+        description: Identifier of the entity executing the creation
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        description: The validated JSON payload containing asset specifications.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetManagementRequest"
+        required: true
+      responses:
+        "201":
+          description: Asset successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetManagementResponse"
+        "400":
+          description: Invalid request payload
+        "409":
+          description: Asset tag or serial number already exists
+  /assets/{assetHash}:
+    get:
+      tags:
+      - Asset Management
+      summary: Retrieve an asset
+      description: Fetches the current specifications and lifecycle state of an asset
+        by its hash.
+      operationId: getAsset
+      parameters:
+      - name: assetHash
+        in: path
+        description: The unique business hash of the asset
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Asset found and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetManagementResponse"
+        "404":
+          description: Asset not found
+    put:
+      tags:
+      - Asset Management
+      summary: Update an asset
+      description: Performs a full or partial update on an asset and logs granular
+        from/to changes in the audit trail.
+      operationId: updateAsset
+      parameters:
+      - name: assetHash
+        in: path
+        description: The unique business hash of the asset
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        description: Identifier of the entity executing the update
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        description: The validated JSON payload containing the new values.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetManagementRequest"
+        required: true
+      responses:
+        "200":
+          description: Asset successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetManagementResponse"
+        "400":
+          description: Invalid request payload
+        "404":
+          description: Asset not found
+        "409":
+          description: Asset tag or serial number conflict
+    delete:
+      tags:
+      - Asset Management
+      summary: Delete an asset
+      description: Permanently removes the hardware asset record from the inventory
+        database.
+      operationId: deleteAsset
+      parameters:
+      - name: assetHash
+        in: path
+        description: The unique business hash of the asset
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Asset successfully deleted
+        "404":
+          description: Asset not found
+  /compute:
+    post:
+      tags:
+      - Compute Resource Management
+      summary: Register a new hybrid compute resource node
+      description: "Logs and provisions a target cloud instance, on-prem VM, or physical\
+        \ hardware asset profile."
+      operationId: registerComputeNode
+      parameters:
+      - name: X-Executor
+        in: header
+        description: Identifier of the administrative engineer cataloging the asset
+          node
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComputeResourceRequest"
+        required: true
+      responses:
+        "201":
+          description: Compute resource instance cataloged successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "400":
+          description: Invalid payload constraints or unrecognized type configuration
+            tokens
+  /compute/{resourceHash}:
+    get:
+      tags:
+      - Compute Resource Management
+      summary: Retrieve a distinct compute profile configuration
+      description: "Fetches complete specifications, active network layout mapping,\
+        \ and the latest hardware usage telemetry snapshot."
+      operationId: getComputeNodeByHash
+      parameters:
+      - name: resourceHash
+        in: path
+        description: The specific infra business key tracking token hash
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Compute node profile located and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "404":
+          description: Target resource tracking hash token not found in cluster storage
+  /compute/{resourceHash}/maintenance/end:
+    post:
+      tags:
+      - Compute Resource Management
+      summary: Terminate maintenance mode and start verification loop
+      description: Closes actual timestamps and returns node to PROVISIONING status
+        to await clean agent telemetry synchronization.
+      operationId: concludeActiveMaintenance
+      parameters:
+      - name: resourceHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      responses:
+        "200":
+          description: Asset released from maintenance and routed back to verification
+            queues
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "400":
+          description: Target asset is not currently flagged under an open maintenance
+            loop
+        "404":
+          description: Target compute resource hash not found
+  /compute/{resourceHash}/maintenance/schedule:
+    post:
+      tags:
+      - Compute Resource Management
+      summary: Schedule a future maintenance window
+      description: "Reserves a timeline block for physical or virtual hardware interventions,\
+        \ mapping out expected duration and alarm silences."
+      operationId: scheduleMaintenanceBlock
+      parameters:
+      - name: resourceHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComputeResourceService.MaintenanceScheduleCmd"
+        required: true
+      responses:
+        "200":
+          description: Maintenance window successfully reserved in inventory timeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "400":
+          description: Invalid timeline boundaries or date execution logic sequence
+            constraints
+        "404":
+          description: Target compute resource hash not found
+  /compute/{resourceHash}/maintenance/start:
+    post:
+      tags:
+      - Compute Resource Management
+      summary: Activate maintenance isolation protocol
+      description: "Shifts node into MAINTENANCE state, applying hard suppressions\
+        \ against monitoring agent ping interference."
+      operationId: initiateActiveMaintenance
+      parameters:
+      - name: resourceHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComputeResourceService.MaintenanceStartCmd"
+        required: true
+      responses:
+        "200":
+          description: Asset locked and isolated under hard maintenance mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "404":
+          description: Target compute resource hash not found
+  /compute/{resourceHash}/telemetry:
+    patch:
+      tags:
+      - Compute Resource Management
+      summary: Ingest remote agent streaming telemetry metrics
+      description: "Updates active processing strain load percentages, network throughput,\
+        \ and overrides the node operational health status."
+      operationId: ingestMetrics
+      parameters:
+      - name: resourceHash
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComputeResourceTelemetryRequest"
+        required: true
+      responses:
+        "200":
+          description: Telemetry packet successfully processed and counters overridden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeResourceResponse"
+        "400":
+          description: Invalid telemetry counters or parsing failure exception triggered
+        "404":
+          description: Target resource tracking hash not found to map metrics link
+  /licenses:
+    post:
+      tags:
+      - Software License Management
+      summary: Register a new software license contract
+      description: Purchases and stores a software contract parameter block into inventory
+        database bounds.
+      operationId: registerLicense
+      parameters:
+      - name: X-Executor
+        in: header
+        description: Identifier of the administrative executive executing the contract
+          logging
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoftwareLicenseRequest"
+        required: true
+      responses:
+        "201":
+          description: Software license contract successfully cataloged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoftwareLicenseResponse"
+        "400":
+          description: Invalid payload structural attributes or unrecognized enum
+            tokens
+  /licenses/{licenseHash}:
+    get:
+      tags:
+      - Software License Management
+      summary: Retrieve a distinct license configuration
+      description: "Fetches comprehensive details, metadata tracking, status nodes,\
+        \ and ongoing allocation lists of a contract."
+      operationId: getLicenseByHash
+      parameters:
+      - name: licenseHash
+        in: path
+        description: The specific corporate license string token identifier hash
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Software license configuration located and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoftwareLicenseResponse"
+        "404":
+          description: Contract hash target parameter not found in cluster storage
+  /licenses/{licenseHash}/allocations:
+    post:
+      tags:
+      - Software License Management
+      summary: Allocate a single software license seat
+      description: Deploys and links a license seat entry record to a corporate user
+        profile or hardware workstation machine asset.
+      operationId: allocateLicenseSeat
+      parameters:
+      - name: licenseHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        description: Identifier of the supervisor routing the deployment seat link
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoftwareLicenseAllocationRequest"
+        required: true
+      responses:
+        "200":
+          description: Seat successfully allocated and compliance counters updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoftwareLicenseResponse"
+        "400":
+          description: Compliance capacity ceiling bounds depletion or expired status
+            restriction exception triggered
+        "404":
+          description: Target contract reference hash not found
+  /maintenance:
+    post:
+      tags:
+      - Maintenance Workflow
+      summary: Open a maintenance ticket
+      description: Initializes a central tracking record bound against an existing
+        inventory hardware asset hash.
+      operationId: openTicket
+      parameters:
+      - name: X-Executor
+        in: header
+        description: Identifier of the agent dispatching the pipeline action
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceTicketRequest"
+        required: true
+      responses:
+        "201":
+          description: Ticket successfully opened and cataloged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceTicketResponse"
+        "400":
+          description: Invalid payload structural attributes
+        "404":
+          description: Target infrastructure asset hash not found
+  /maintenance/{ticketHash}:
+    get:
+      tags:
+      - Maintenance Workflow
+      summary: Retrieve a ticket profile
+      description: "Fetches complete ongoing details, timeline commentary logs, and\
+        \ status scopes of a ticket."
+      operationId: getTicketByHash
+      parameters:
+      - name: ticketHash
+        in: path
+        description: The specific business token string hash reference
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Maintenance tracking ticket found and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceTicketResponse"
+        "404":
+          description: Ticket not found matching hash parameter
+  /maintenance/{ticketHash}/comments:
+    post:
+      tags:
+      - Maintenance Workflow
+      summary: Add a progress comment
+      description: Appends a historical immutable textual diagnostic or status notation
+        log directly inside the document timeline graph.
+      operationId: appendComment
+      parameters:
+      - name: ticketHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        description: Identifier of the human technician or webhook updating the queue
+          trace
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCommentRequest"
+        required: true
+      responses:
+        "200":
+          description: Comment successfully appended into the timeline list document
+            graph
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceTicketResponse"
+        "404":
+          description: Ticket target hash parameter reference not found
+  /maintenance/{ticketHash}/status:
+    patch:
+      tags:
+      - Maintenance Workflow
+      summary: Transition ticket lifecycle state
+      description: Alters the internal operational track enum status location nodes
+        using strict guardrails checking mechanisms.
+      operationId: transitionStatus
+      parameters:
+      - name: ticketHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: targetStatus
+        in: query
+        description: The raw target MaintenanceStatus string node token enum
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        description: Identifier of the supervisor executing systemic lifecycle override
+        required: true
+        schema:
+          minLength: 1
+          type: string
+      responses:
+        "200":
+          description: Status updated and saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceTicketResponse"
+        "400":
+          description: State validation guard check bounds violation or terminal node
+            block lock
   /users:
     get:
       tags:
@@ -188,6 +771,159 @@ paths:
                   $ref: "#/components/schemas/AuditLogResponse"
 components:
   schemas:
+    AddCommentRequest:
+      required:
+      - author
+      - message
+      type: object
+      properties:
+        author:
+          minLength: 1
+          type: string
+          x-size-message: Comment author cannot be blank
+        message:
+          minLength: 1
+          type: string
+          x-size-message: Comment message content text cannot be blank
+      description: Inbound payload representing an atomic discursive addition inside
+        an active maintenance pipeline.
+    AssetManagementRequest:
+      required:
+      - assetTag
+      - equipmentType
+      - purchaseValue
+      - serialNumber
+      - specification
+      type: object
+      properties:
+        assetTag:
+          minLength: 1
+          type: string
+          x-size-message: Asset tag cannot be blank
+        serialNumber:
+          minLength: 1
+          type: string
+          x-size-message: Serial number cannot be blank
+        equipmentType:
+          $ref: "#/components/schemas/EquipmentType"
+        status:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/AssetStatus"
+        userId:
+          type: string
+          nullable: true
+        purchaseValue:
+          minimum: 0
+          type: number
+          x-minimum-message: Purchase value must be greater than or equal to zero
+          x-not-null-message: Purchase value is required
+        saleValue:
+          minimum: 0
+          type: number
+          nullable: true
+          x-minimum-message: Sale value must be greater than or equal to zero
+        acquisitionDate:
+          type: string
+          format: date-time
+          nullable: true
+        specification:
+          $ref: "#/components/schemas/AssetSpecificationModel"
+      description: Data Transfer Object representing the incoming payload to create
+        or update a hardware asset. Contains rigorous Jakarta validation rules to
+        enforce data compliance at the API edge.
+    AssetManagementResponse:
+      required:
+      - acquisitionDate
+      - assetHash
+      - assetTag
+      - comments
+      - equipmentType
+      - purchaseValue
+      - serialNumber
+      - specification
+      - status
+      type: object
+      properties:
+        assetHash:
+          type: string
+        assetTag:
+          type: string
+        serialNumber:
+          type: string
+        equipmentType:
+          $ref: "#/components/schemas/EquipmentType"
+        status:
+          $ref: "#/components/schemas/AssetStatus"
+        userId:
+          type: string
+          nullable: true
+        purchaseValue:
+          type: number
+        saleValue:
+          type: number
+          nullable: true
+        acquisitionDate:
+          type: string
+          format: date-time
+        decommissionDate:
+          type: string
+          format: date-time
+          nullable: true
+        saleDate:
+          type: string
+          format: date-time
+          nullable: true
+        specification:
+          $ref: "#/components/schemas/AssetSpecificationModel"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MaintenanceComment"
+      description: Data Transfer Object representing the unified outbound payload
+        for asset profiles. Formatted for seamless integration with client-side user
+        interfaces and frontend dashboards.
+    AssetSpecificationModel:
+      type: object
+      properties:
+        manufacturer:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        macAddress:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        operatingSystem:
+          type: string
+          nullable: true
+      description: Embedded record representing structural hardware specifications
+        and networking identities. Directly nested within the asset document inside
+        MongoDB.
+    AssetStatus:
+      type: string
+      description: Enumeration representing the granular administrative lifecycle
+        states of a corporate hardware asset.
+      enum:
+      - AVAILABLE
+      - ALLOCATED
+      - UNDER_MAINTENANCE
+      - DECOMMISSIONED
+      - SOLD
+      x-enum-descriptions:
+      - The asset is sitting in inventory and is completely ready to be assigned to
+        an employee.
+      - The asset has been actively provisioned and is currently in custody of an
+        employee.
+      - "The device is undergoing physical repairs, hardware upgrades, or configuration\
+        \ resets."
+      - "The hardware has reached its logical end-of-life, is broken, or was retired\
+        \ from active service."
+      - The asset was legally sold or liquidated to a third party or employee.
     AuditLogModel.ChangeDetail:
       required:
       - from
@@ -226,6 +962,690 @@ components:
           type: string
       description: Data Transfer Object representing an audit log entry in the API
         response.
+    ComputeResourceRequest:
+      required:
+      - externalFqdn
+      - gateway
+      - internalDnsName
+      - macAddress
+      - name
+      - operatingSystem
+      - privateIp
+      - provider
+      - publicIp
+      - ramMemoryMb
+      - resourceType
+      - spec
+      - storageCapacityGb
+      - subnetCidr
+      - vCpus
+      type: object
+      properties:
+        name:
+          minLength: 1
+          type: string
+          x-size-message: Resource instance descriptive name cannot be blank
+        resourceType:
+          minLength: 1
+          type: string
+          x-size-message: Resource virtualization architecture type layer cannot be
+            blank
+        provider:
+          minLength: 1
+          type: string
+          x-size-message: Infrastructure hosting provider deployment location cannot
+            be blank
+        vCpus:
+          minimum: 0
+          exclusiveMinimum: true
+          type: integer
+          format: int32
+          x-minimum-message: vCPUs volume allocation must be greater than zero
+          x-not-null-message: Allocated virtual CPU core quantity must be provided
+        ramMemoryMb:
+          minimum: 0
+          exclusiveMinimum: true
+          type: integer
+          format: int32
+          x-minimum-message: RAM memory allocation size in Megabytes must be greater
+            than zero
+          x-not-null-message: Allocated RAM memory size must be provided
+        storageCapacityGb:
+          minimum: 0
+          exclusiveMinimum: true
+          type: integer
+          format: int64
+          x-minimum-message: Storage capacity allocation in Gigabytes must be greater
+            than zero
+          x-not-null-message: Persistent storage block volume capacity must be provided
+        operatingSystem:
+          minLength: 1
+          type: string
+          x-size-message: Target node operating system or base image template name
+            cannot be blank
+        privateIp:
+          type: string
+        publicIp:
+          type: string
+        subnetCidr:
+          type: string
+        gateway:
+          type: string
+        macAddress:
+          type: string
+        internalDnsName:
+          type: string
+        externalFqdn:
+          type: string
+        spec:
+          type: object
+          additionalProperties:
+            type: object
+      description: "Inbound API Request payload containing comprehensive parameters\
+        \ for registering, provisioning, and cataloging a cloud or on-premises compute\
+        \ resource."
+    ComputeResourceResponse:
+      required:
+      - createdAt
+      - maintenanceWindow
+      - metrics
+      - name
+      - networkConfig
+      - operatingSystem
+      - provider
+      - ramMemoryMb
+      - resourceHash
+      - resourceType
+      - spec
+      - status
+      - storageCapacityGb
+      - updatedAt
+      - vCpus
+      type: object
+      properties:
+        resourceHash:
+          type: string
+        name:
+          type: string
+        resourceType:
+          $ref: "#/components/schemas/ResourceType"
+        provider:
+          $ref: "#/components/schemas/InfrastructureProvider"
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        vCpus:
+          type: integer
+          format: int32
+        ramMemoryMb:
+          type: integer
+          format: int32
+        storageCapacityGb:
+          type: integer
+          format: int64
+        operatingSystem:
+          type: string
+        networkConfig:
+          $ref: "#/components/schemas/NetworkConfig"
+        metrics:
+          $ref: "#/components/schemas/ResourceMetrics"
+        maintenanceWindow:
+          $ref: "#/components/schemas/MaintenanceWindow"
+        spec:
+          type: object
+          additionalProperties:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: "Outbound unified JSON data snapshot representing a complete hybrid,\
+        \ cloud, or on-premises compute environment profile with active network and\
+        \ SRE maintenance configurations."
+    ComputeResourceService.MaintenanceScheduleCmd:
+      required:
+      - reason
+      - scheduledEnd
+      - scheduledStart
+      - silenceAlerts
+      type: object
+      properties:
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        reason:
+          minLength: 1
+          type: string
+        silenceAlerts:
+          type: boolean
+      description: Inbound command record DTO dedicated to scheduling future resource
+        maintenance windows.
+    ComputeResourceService.MaintenanceStartCmd:
+      required:
+      - reason
+      - silenceAlerts
+      type: object
+      properties:
+        reason:
+          minLength: 1
+          type: string
+        silenceAlerts:
+          type: boolean
+      description: Inbound command record DTO dedicated to starting an immediate or
+        scheduled maintenance window.
+    ComputeResourceTelemetryRequest:
+      required:
+      - cpuUsagePercentage
+      - diskUsageGb
+      - networkInMbitSec
+      - networkOutMbitSec
+      - ramUsageMb
+      - status
+      type: object
+      properties:
+        status:
+          minLength: 1
+          type: string
+          x-size-message: Operational status signature node cannot be blank
+        cpuUsagePercentage:
+          maximum: 100
+          minimum: 0
+          type: number
+          format: double
+          x-maximum-message: CPU percentage consumption ceiling bounds cannot exceed
+            100%
+          x-minimum-message: CPU percentage consumption floor bounds must be 0%
+          x-not-null-message: Instantaneous CPU usage ratio core must be provided
+        ramUsageMb:
+          minimum: 0
+          type: integer
+          format: int64
+          x-minimum-message: RAM memory utilization size in MB cannot be negative
+          x-not-null-message: Active RAM memory consumption metrics must be provided
+        diskUsageGb:
+          minimum: 0
+          type: integer
+          format: int64
+          x-minimum-message: Storage utilization size in GB cannot be negative
+          x-not-null-message: Active disk space consumption metrics must be provided
+        networkInMbitSec:
+          type: number
+          format: double
+        networkOutMbitSec:
+          type: number
+          format: double
+      description: "High-performance inbound telemetry payload pushed by remote monitoring\
+        \ agents or cloud metrics scrapers. Updates dynamic strain levels, capacity\
+        \ usage, and overrides heartbeat states."
+    EquipmentType:
+      type: string
+      description: Enumeration detailing the structural taxonomy classifications of
+        corporate hardware items.
+      enum:
+      - LAPTOP
+      - DESKTOP
+      - MOBILE
+      - NETWORKING
+      - SERVER
+      x-enum-descriptions:
+      - "Portable employee workstations (e.g., MacBooks, ThinkPads, Dell Latitudes)."
+      - Fixed desk workstations or mini PC hosts.
+      - Corporate mobile cellular nodes or tablets.
+      - "Network infrastructure units (e.g., switches, physical routers, firewalls,\
+        \ Wi-Fi APs)."
+      - On-premise infrastructure hosts or rack-mounted computational blocks.
+    InfrastructureProvider:
+      type: string
+      description: "Defines the structural hosting architecture zones for the compute\
+        \ infrastructure. Maps high-availability public clouds, bare-metal enterprise\
+        \ datacenters, and edge home-lab environments."
+      enum:
+      - AWS_CLOUD
+      - AZURE_CLOUD
+      - GCP_CLOUD
+      - PRIVATE_DATACENTER
+      - HOME_LAB
+      x-enum-descriptions:
+      - Amazon Web Services elastic compute global public cloud infrastructure.
+      - Microsoft Azure public enterprise cloud computing matrix.
+      - Google Cloud Platform data-driven hyper-scaler infrastructure network.
+      - "Private on-premises Tier-3/Tier-4 physical datacenter environments (Datacenter\
+        \ X, Datacenter Y)."
+      - Localized edge home-lab deployment ecosystem running behind custom proxy blocks
+        or residential networks.
+    LicenseAllocation:
+      required:
+      - allocatedAt
+      - allocatedBy
+      - assetHash
+      - userId
+      type: object
+      properties:
+        assetHash:
+          type: string
+          description: The target workstation machine hardware asset tracking token.
+            Nullable if user-bound.
+        userId:
+          type: string
+          description: The employee identifier utilizing the platform seat access.
+            Nullable if machine-bound.
+        allocatedAt:
+          type: string
+          description: The precise timestamp when this seat allocation was recorded.
+          format: date-time
+        allocatedBy:
+          type: string
+          description: The identity string of the supervisor or automated agent executing
+            the assignment.
+      description: Immutable embedded subdocument tracking the atomic assignment of
+        a software license seat. Must map explicitly against a hardware asset machine
+        target or a corporate user entity identity.
+    LicenseStatus:
+      type: string
+      description: Defines the operational compliance lifecycle states for a software
+        license record. Annotated with Serdeable for reflection-free JSON serialization
+        bounds.
+      enum:
+      - ACTIVE
+      - EXPIRED
+      - SUSPENDED
+      - DEPLETED
+      x-enum-descriptions:
+      - "License is active, valid, and available for hardware or user allocations."
+      - The license calendar expiration date has been passed. Structural block on
+        new seats allocation.
+      - "Administrative lock state (e.g., billing disputes, software audit verification\
+        \ pauses)."
+      - All purchased seats are fully consumed and allocated across infrastructure
+        assets.
+    LicenseType:
+      type: string
+      description: Defines the architectural licensing distribution models for corporate
+        software assets. Annotated with Serdeable for native compilation and fast
+        JSON serialization.
+      enum:
+      - PER_SEAT
+      - ENTERPRISE
+      - SAAS_SUBSCRIPTION
+      - VOLUME_MAK
+      x-enum-descriptions:
+      - Bound to a specific physical hardware machine or single active user profile
+        seat.
+      - Enterprise-wide contract allowing unrestricted deployment within the entire
+        organization bounds.
+      - Modern Software-as-a-Service monthly or annual recurring cloud subscription
+        vector.
+      - Multiple Activation Key format allowing a predefined block lock of sequential
+        activations.
+    MaintenanceComment:
+      required:
+      - author
+      - message
+      - statusWhen
+      - timestamp
+      type: object
+      properties:
+        author:
+          type: string
+          description: The name or business identifier of the person who wrote the
+            comment.
+        message:
+          type: string
+          description: The actual discursive content/text of the update.
+        statusWhen:
+          $ref: "#/components/schemas/MaintenanceStatus"
+        timestamp:
+          type: string
+          description: The absolute instant when the comment was recorded.
+          format: date-time
+      description: Represents an immutable user or technician comment within a maintenance
+        ticket. Captures historical timeline discourse bound to the system state at
+        that specific moment.
+    MaintenanceStatus:
+      type: string
+      description: "Defines the strict, chronological lifecycle states for a computer\
+        \ maintenance ticket. Annotated with Serdeable to allow seamless compilation\
+        \ and native JSON serialization."
+      enum:
+      - OPENED
+      - IN_ANALYSIS
+      - AWAITING_PARTS
+      - EXTERNAL_VENDOR
+      - MANUFACTURER_WARRANTY
+      - AWAITING_PICKUP
+      - TESTING
+      - COMPLETED
+      - CANCELED
+      x-enum-descriptions:
+      - Ticket successfully registered and awaiting initial technical triage.
+      - Computer is currently on the technical bench undergoing hardware diagnostics.
+      - "Diagnosis completed, but progress is halted waiting for internal or external\
+        \ parts replacement."
+      - Ticket paused because the equipment was dispatched to a specialized external
+        vendor.
+      - Ticket paused because the equipment was dispatched to the manufacturer's official
+        warranty service.
+      - Maintenance or external execution finished; awaiting pickup from vendor or
+        notification to user.
+      - "Equipment returned to bench for hardware stress tests, quality assurance,\
+        \ and OS stabilization."
+      - "Maintenance flow successfully validated, resolved, and equipment returned\
+        \ to the user."
+      - "Ticket administrative cancellation due to irreparable damage, structural\
+        \ write-off, or duplication."
+    MaintenanceTicketRequest:
+      required:
+      - assetHash
+      - assignedTechnicianId
+      - issueDescription
+      - requesterId
+      type: object
+      properties:
+        assetHash:
+          minLength: 1
+          type: string
+          x-size-message: Target asset hash reference cannot be blank
+        requesterId:
+          minLength: 1
+          type: string
+          x-size-message: Requester identifier cannot be blank
+        assignedTechnicianId:
+          type: string
+        issueDescription:
+          minLength: 1
+          type: string
+          x-size-message: Detailed issue description cannot be blank
+      description: API Request payload bound to input validations for launching a
+        new hardware maintenance ticket.
+    MaintenanceTicketResponse:
+      required:
+      - assetHash
+      - assignedTechnicianId
+      - comments
+      - createdAt
+      - issueDescription
+      - requesterId
+      - status
+      - ticketHash
+      - updatedAt
+      type: object
+      properties:
+        ticketHash:
+          type: string
+        assetHash:
+          type: string
+        requesterId:
+          type: string
+        assignedTechnicianId:
+          type: string
+        issueDescription:
+          type: string
+        status:
+          $ref: "#/components/schemas/MaintenanceStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MaintenanceComment"
+      description: Outbound complete structural JSON snapshot representing a corporate
+        maintenance ticket instance.
+    MaintenanceWindow:
+      required:
+      - actualEnd
+      - actualStart
+      - approvedBy
+      - reason
+      - scheduledEnd
+      - scheduledStart
+      - silenceAlerts
+      type: object
+      properties:
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        approvedBy:
+          type: string
+        silenceAlerts:
+          type: boolean
+        actualStart:
+          type: string
+          format: date-time
+        actualEnd:
+          type: string
+          format: date-time
+      description: "Embedded subdocument record tracking infrastructure governance,\
+        \ approval signatures, time boundaries, and alarm suppression flags during\
+        \ structural maintenance pipelines."
+    NetworkConfig:
+      required:
+      - externalFqdn
+      - gateway
+      - internalDnsName
+      - macAddress
+      - privateIp
+      - publicIp
+      - subnetCidr
+      type: object
+      properties:
+        privateIp:
+          type: string
+        publicIp:
+          type: string
+        subnetCidr:
+          type: string
+        gateway:
+          type: string
+        macAddress:
+          type: string
+        internalDnsName:
+          type: string
+        externalFqdn:
+          type: string
+      description: "Embedded subdocument tracking detailed network topology, routing\
+        \ vectors, hardware mac identification, and DNS configurations across public\
+        \ or private segments."
+    ResourceMetrics:
+      required:
+      - cpuUsagePercentage
+      - diskUsageGb
+      - lastTelemetryAt
+      - networkInMbitSec
+      - networkOutMbitSec
+      - ramUsageMb
+      type: object
+      properties:
+        cpuUsagePercentage:
+          type: number
+          format: double
+        ramUsageMb:
+          type: integer
+          format: int64
+        diskUsageGb:
+          type: integer
+          format: int64
+        networkInMbitSec:
+          type: number
+          format: double
+        networkOutMbitSec:
+          type: number
+          format: double
+        lastTelemetryAt:
+          type: string
+          format: date-time
+      description: "Embedded subdocument tracking real-time telemetry, capacity thresholds,\
+        \ and hardware processing strain signatures for a compute resource."
+    ResourceStatus:
+      type: string
+      description: "Defines the operational heartbeat, provisioning lifecycle, and\
+        \ SRE governance maintenance states of a cloud, hybrid, or on-premises compute\
+        \ resource."
+      enum:
+      - RUNNING
+      - STOPPED
+      - PROVISIONING
+      - TERMINATED
+      - UNREACHABLE
+      - MAINTENANCE
+      - DRAINING
+      - DECOMMISSIONED
+      x-enum-descriptions:
+      - "Resource is successfully deployed, powered on, and actively communicating\
+        \ heartbeat signatures."
+      - "Resource is administratively or physically powered off, paused, or suspended."
+      - "Resource is in the orchestration pipeline (e.g., AWS EC2 spinning up, Docker\
+        \ build executing)."
+      - "Resource has been permanently deleted, de-provisioned, or purged from cloud/hypervisor\
+        \ bounds."
+      - Critical state! Hypervisor or automation system lost network ping or telemetry
+        route with the node.
+      - "Resource is undergoing an authorized, scheduled maintenance window (e.g.,\
+        \ hardware upgrades, kernel patching). Automated monitoring alerts and notification\
+        \ pathways (PagerDuty/Slack) must be muted/silenced for this node."
+      - "Graceful decommissioning state. The cluster node or host is bleeding out\
+        \ connections, finishing running tasks, and refusing new incoming traffic\
+        \ routing requests before entering hard termination."
+      - "Permanently retired and decommissioned asset. The record is preserved within\
+        \ the cluster database for strict financial amortization auditing and historical\
+        \ inventory tracking, but the instance is offline forever."
+    ResourceType:
+      type: string
+      description: Defines the structural compute virtualization level and execution
+        architecture layer.
+      enum:
+      - BARE_METAL_HOST
+      - VIRTUAL_MACHINE
+      - CONTAINER
+      x-enum-descriptions:
+      - Bare-metal physical enterprise hardware server rack unit hosting hypervisors
+        or cluster engines.
+      - "Traditional hypervisor-managed abstraction layer instance (e.g., AWS EC2,\
+        \ Proxmox VM, VMware ESXi)."
+      - "Lightweight OS-level virtualized isolate processing node (e.g., Docker Container,\
+        \ Podman Core, K8s Pod)."
+    SoftwareLicenseAllocationRequest:
+      required:
+      - assetHash
+      - userId
+      type: object
+      properties:
+        assetHash:
+          type: string
+        userId:
+          type: string
+      description: Inbound API Request payload representing the allocation of a single
+        license seat. Contains optional targets to route the software access link
+        to a physical machine or employee.
+    SoftwareLicenseRequest:
+      required:
+      - acquisitionDate
+      - expirationDate
+      - licenseKey
+      - licenseType
+      - publisher
+      - softwareName
+      - totalSeats
+      type: object
+      properties:
+        softwareName:
+          minLength: 1
+          type: string
+          x-size-message: Software name cannot be blank
+        publisher:
+          minLength: 1
+          type: string
+          x-size-message: Publisher name cannot be blank
+        licenseKey:
+          minLength: 1
+          type: string
+          x-size-message: License activation key serial code cannot be blank
+        licenseType:
+          minLength: 1
+          type: string
+          x-size-message: License distribution type model cannot be blank
+        totalSeats:
+          minimum: 0
+          exclusiveMinimum: true
+          type: integer
+          format: int32
+          x-minimum-message: Total bought seats volume capacity must be greater than
+            zero
+          x-not-null-message: Total seat block size capacity must be supplied
+        acquisitionDate:
+          type: string
+          format: date-time
+          x-not-null-message: Acquisition timeline instance timestamp cannot be null
+        expirationDate:
+          type: string
+          format: date-time
+      description: Inbound API Request payload holding structural validation parameters
+        for purchasing and cataloging a new corporate software license contract.
+    SoftwareLicenseResponse:
+      required:
+      - acquisitionDate
+      - allocatedSeats
+      - allocations
+      - createdAt
+      - expirationDate
+      - licenseHash
+      - licenseKey
+      - licenseType
+      - publisher
+      - softwareName
+      - status
+      - totalSeats
+      - updatedAt
+      type: object
+      properties:
+        licenseHash:
+          type: string
+        softwareName:
+          type: string
+        publisher:
+          type: string
+        licenseKey:
+          type: string
+        licenseType:
+          $ref: "#/components/schemas/LicenseType"
+        status:
+          $ref: "#/components/schemas/LicenseStatus"
+        totalSeats:
+          type: integer
+          format: int32
+        allocatedSeats:
+          type: integer
+          format: int32
+        acquisitionDate:
+          type: string
+          format: date-time
+        expirationDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/LicenseAllocation"
+      description: Outbound unified JSON data snapshot representing a complete corporate
+        software license profile.
     UserManagementRequest:
       required:
       - birthDate
