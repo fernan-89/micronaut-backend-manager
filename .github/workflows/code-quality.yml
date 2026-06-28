@@ -24,10 +24,6 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. Dá permissão de execução para o Gradle Wrapper de forma segura
-      - name: 🔓 Grant Execute Permission to Gradlew
-        run: chmod +x gradlew
-
-      # 4. Executa a suíte de checagem estática do Gradle (Checkstyle, PMD, etc.)
+      # 3. CORREÇÃO CRÍTICA: Executa a análise estática usando o Gradle nativo do ambiente (ignora o wrapper local)
       - name: 🧬 Run Static Code Analysis
-        run: "./gradlew check --no-daemon -x test"
+        run: "gradle check --no-daemon -x test"
