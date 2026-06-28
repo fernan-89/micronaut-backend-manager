@@ -1,0 +1,75 @@
+{
+  "info": {
+    "_postman_id": "e2d3c4b5-a678-9012-3456-7890abcdef12",
+    "name": "Infrastructure De-Para Audit Validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Passo 1: Atualizar Sistema Operacional (Gerar Delta)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code é 200 - OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Executor", "value": "SRE-Automation-PatchManager" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operatingSystem\": \"Red Hat Enterprise Linux 9.4 (Plow)\",\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/compute/{{currentResourceHash}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["compute", "{{currentResourceHash}}"]
+        }
+      }
+    },
+    {
+      "name": "Passo 2: Validar Estrutura de Logs De/Para",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code é 200 - Retornou Logs', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Log estruturado possui a matriz from/to', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var ultimoLog = jsonData[jsonData.length - 1];",
+              "    ",
+              "    pm.expect(ultimoLog.changes.operatingSystem.from).to.not.be.undefined;",
+              "    pm.expect(ultimoLog.changes.operatingSystem.to).to.eql('Red Hat Enterprise Linux 9.4 (Plow)');",
+              "    pm.expect(ultimoLog.executor).to.eql('SRE-Automation-PatchManager');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/compute/{{currentResourceHash}}/logs",
+          "host": ["{{baseUrl}}"],
+          "path": ["compute", "{{currentResourceHash}}", "logs"]
+        }
+      }
+    }
+  ]
+}

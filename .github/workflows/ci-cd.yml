@@ -1,0 +1,83 @@
+name: 🚀 ThinkLab Manager - Continuous Integration & E2E Testing
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    name: 🏗️ Hardening Build & E2E Automation Loop
+    runs-on: ubuntu-latest
+
+    # Sobe o MongoDB oficial como um serviço efêmero em background para o Micronaut testar
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+      # 1. Faz o checkout do código do repositório
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Configura o ambiente Java com a versão estável mais recente do JDK 25
+      - name: ☕ Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      # 3. Dá permissão de execução para o Gradle Wrapper de forma segura
+      - name: 🔓 Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      # 4. Executa a compilação e validação estática do código (Gera o shadowJar)
+      - name: 🔨 Compile and Build ShadowJar
+        run: ./gradlew shadowJar --no-daemon -x test
+
+      # 5. Inicializa a aplicação Micronaut em background para podermos testar com o Newman
+      - name: 🟢 Start Micronaut Microservice (Background)
+        run: |
+          java -jar build/libs/thinklab-*-all.jar &
+          echo "Aguardando inicialização da API na porta 8080..."
+          sleep 12 # Tempo de segurança para o Micronaut subir o contexto reativo do Mongo
+        env:
+          MONGO_URI: "mongodb://localhost:27017/enterprise-infra-db"
+          MICRONAUT_ENVIRONMENTS: test
+
+      # 6. Configura o Node.js para instalar as ferramentas do Postman
+      - name: 🟢 Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 7. Instala o Newman e o gerador de relatórios visuais HTML corporativos
+      - name: 📦 Install Newman & Extra Reporter
+        run: npm install -g newman newman-reporter-htmlextra
+
+      # 8. Cria a pasta para isolar os relatórios gerados
+      - name: 📁 Create Reports Directory
+        run: mkdir -p reports
+
+      # 9. EXECUÇÃO CRÍTICA: Newman roda a sua Collection automatizada testando os Enums e rotas
+      - name: 🧪 Run Automated Postman/Newman E2E Loop
+        run: |
+          newman run ./PostMan-Collection/Bulk_Asset_Ingestion_Suite.json \
+            -e ./PostMan-Collection/Dev.postman_environment.json \
+            -r cli,htmlextra \
+            --reporter-htmlextra-export ./reports/sre-ingestion-report.html \
+            --bail
+        # O '--bail' garante que se QUALQUER asserção falhar, o pipeline para imediatamente.
+
+      # 10. Salva o relatório HTML gerado como um artefato do GitHub Actions
+      - name: 📊 Upload SRE HTML Test Report
+        uses: actions/upload-artifact@v4
+        if: always() # Garante que o relatório suba mesmo se os testes falharem (ajuda a debugar)
+        with:
+          name: SRE-Ingestion-Report
+          path: ./reports/sre-ingestion-report.html
+          retention-days: 7

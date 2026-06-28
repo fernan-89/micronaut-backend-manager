@@ -1,0 +1,86 @@
+{
+  "info": {
+    "_postman_id": "f1e2d3c4-b5a6-7890-1234-56789abcdef0",
+    "name": "Bulk Asset & SRE Infrastructure Suite",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Passo 1: Registrar Ativo Físico",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code é 201 - Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Retornou o hash do ativo cadastrado', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.assetHash).to.not.be.undefined;",
+              "    pm.environment.set('currentAssetHash', jsonData.assetHash);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Executor", "value": "Newman-Pipeline-CI" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"Dell PowerEdge R760\",\n  \"manufacturer\": \"Dell Technologies\",\n  \"serialNumber\": \"ST-BR-77X8291-M\",\n  \"equipmentType\": \"SERVER\",\n  \"warrantyMonths\": 60\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/assets",
+          "host": ["{{baseUrl}}"],
+          "path": ["assets"]
+        }
+      }
+    },
+    {
+      "name": "Passo 2: Provisionar Camada Lógica SRE",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code é 201 - Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Recurso computacional atrelado com sucesso', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.resourceHash).to.not.be.undefined;",
+              "    pm.expect(jsonData.linkedAssetHash).to.eql(pm.environment.get('currentAssetHash'));",
+              "    pm.environment.set('currentResourceHash', jsonData.resourceHash);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Executor", "value": "Newman-Pipeline-CI" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resourceType\": \"BARE_METAL_HOST\",\n  \"infrastructureProvider\": \"PRIVATE_DATACENTER\",\n  \"hostname\": \"sre-node-prod-dc3-01\",\n  \"privateIp\": \"10.240.12.15\",\n  \"linkedAssetHash\": \"{{currentAssetHash}}\",\n  \"spec\": {\n    \"hypervisor\": \"VMware ESXi 8.0u2\",\n    \"managementUrl\": \"https://vcenter.enterprise.internal/host/dc3-01\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/compute",
+          "host": ["{{baseUrl}}"],
+          "path": ["compute"]
+        }
+      }
+    }
+  ]
+}

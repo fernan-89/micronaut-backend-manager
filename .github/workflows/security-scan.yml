@@ -1,0 +1,40 @@
+name: 🛡️ ThinkLab Manager - Security & CVE Scanner
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-audit:
+    name: 🕵️ Image & Repository Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      # 1. Analisa vulnerabilidades no próprio código-fonte e dependências do Gradle
+      - name: 🔍 Scan Repository Dependencies (FOSSA/Trivy FS)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0' # Não quebra o build aqui, apenas reporta no log do GitHub
+          severity: 'CRITICAL,HIGH'
+
+      # 2. Constrói a imagem localmente apenas para o Scanner validar o container final
+      - name: 🐳 Build Temporary Image for Scanning
+        run: docker build -t thinklab-manager:scan .
+
+      # 3. Escaneia a imagem gerada à procura de falhas críticas de infraestrutura
+      - name: 🚨 Scan Container Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'thinklab-manager:scan'
+          format: 'table'
+          exit-code: '1' # CRÍTICO: Se a imagem contiver falhas de nível CRITICAL, quebra o pipeline imediatamente!
+          ignore-unfixed: true
+          severity: 'CRITICAL'
