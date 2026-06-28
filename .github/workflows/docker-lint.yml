@@ -12,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Faz o checkout do código do repositório
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      # Executa a validação estática do Dockerfile contra as melhores práticas da comunidade
+      # 2. Executa a validação estática do Dockerfile contra as melhores práticas da comunidade
       - name: 📐 Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:

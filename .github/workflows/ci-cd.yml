@@ -23,11 +23,11 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Configura o ambiente Java com a versão estável mais recente do JDK 25
-      - name: ☕ Set up JDK 25
+      # 2. Configura o ambiente Java com a versão correta (JDK 21) e alinhamento corrigido
+      - name: ☕ Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
+          java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
@@ -39,12 +39,12 @@ jobs:
       - name: 🔨 Compile and Build ShadowJar
         run: ./gradlew shadowJar --no-daemon -x test
 
-      # 5. Inicializa a aplicação Micronaut em background para podermos testar com o Newman
+      # 5. Inicializa a aplicação Micronaut em background usando a nomenclatura exata do rootProject
       - name: 🟢 Start Micronaut Microservice (Background)
         run: |
-          java -jar build/libs/thinklab-*-all.jar &
+          java -jar build/libs/thinklabmanager-*-all.jar &
           echo "Aguardando inicialização da API na porta 8080..."
-          sleep 12 # Tempo de segurança para o Micronaut subir o contexto reativo do Mongo
+          sleep 15 # Tempo de segurança para o Netty/Micronaut subir o contexto reativo do Mongo
         env:
           MONGO_URI: "mongodb://localhost:27017/enterprise-infra-db"
           MICRONAUT_ENVIRONMENTS: test
@@ -71,7 +71,6 @@ jobs:
             -r cli,htmlextra \
             --reporter-htmlextra-export ./reports/sre-ingestion-report.html \
             --bail
-        # O '--bail' garante que se QUALQUER asserção falhar, o pipeline para imediatamente.
 
       # 10. Salva o relatório HTML gerado como um artefato do GitHub Actions
       - name: 📊 Upload SRE HTML Test Report

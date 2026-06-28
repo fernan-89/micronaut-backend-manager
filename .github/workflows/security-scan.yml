@@ -12,11 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Faz o checkout do código do repositório
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. Analisa vulnerabilidades no próprio código-fonte e dependências do Gradle
-      - name: 🔍 Scan Repository Dependencies (FOSSA/Trivy FS)
+      # 2. Analisa vulnerabilidades no próprio código-fonte e dependências do Gradle
+      - name: 🔍 Scan Repository Dependencies (Trivy FS)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -25,11 +26,11 @@ jobs:
           exit-code: '0' # Não quebra o build aqui, apenas reporta no log do GitHub
           severity: 'CRITICAL,HIGH'
 
-      # 2. Constrói a imagem localmente apenas para o Scanner validar o container final
+      # 3. Constrói a imagem localmente usando o Dockerfile corrigido (Java 21)
       - name: 🐳 Build Temporary Image for Scanning
         run: docker build -t thinklab-manager:scan .
 
-      # 3. Escaneia a imagem gerada à procura de falhas críticas de infraestrutura
+      # 4. Escaneia a imagem gerada à procura de falhas críticas de infraestrutura
       - name: 🚨 Scan Container Image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
