@@ -1,0 +1,93 @@
+plugins {
+    // Micronaut application plugin for building and deploying the application
+    id("io.micronaut.application") version "5.0.0"
+    // Shadow plugin for creating an executable fat JAR
+    id("com.gradleup.shadow") version "9.4.1"
+    // Micronaut AOT plugin for Ahead-of-Time optimizations to improve startup and memory
+    id("io.micronaut.aot") version "5.0.0"
+}
+
+version = "0.1"
+group = "com.local.app"
+
+repositories {
+    mavenCentral()
+    // Snapshot repository for cutting-edge Micronaut modules
+    maven { url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/") }
+}
+
+dependencies {
+    // Processadores de anotação
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    annotationProcessor("io.micronaut.data:micronaut-data-document-processor")
+    annotationProcessor("io.micronaut.openapi:micronaut-openapi")
+
+    // Dependências principais
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut.data:micronaut-data-mongodb")
+    implementation("io.micronaut:micronaut-management")
+    implementation("io.swagger.core.v3:swagger-annotations")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:javase:3.5.3")
+    implementation("io.micronaut.email:micronaut-email-javamail")
+    implementation("io.micronaut:micronaut-http-client")
+
+    // Runtimes
+    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly("org.mongodb:mongodb-driver-sync")
+}
+
+application {
+    // Main entry point for the application bootstrap
+    mainClass = "com.local.app.Application"
+}
+
+java {
+    // Setting Java version compatibility to 25 as per project requirements
+    sourceCompatibility = JavaVersion.toVersion("25")
+    targetCompatibility = JavaVersion.toVersion("25")
+}
+
+// Configuration for GraalVM native image generation
+graalvmNative.toolchainDetection = false
+graalvmNative {
+    binaries {
+        all {
+            // Optimize memory usage for native images
+            buildArgs.add("-H:+SharedArenaSupport")
+        }
+    }
+}
+
+// Micronaut-specific framework configuration
+micronaut {
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        // Enable incremental annotation processing for faster builds
+        incremental(true)
+        annotations("com.local.app.*")
+    }
+    // Ahead-of-Time (AOT) optimizations for better startup time and performance
+    aot {
+        optimizeServiceLoading = false
+        convertYamlToJava = false
+        precomputeOperations = true
+        cacheEnvironment = true
+        optimizeClassLoading = true
+        deduceEnvironment = true
+        optimizeNetty = true
+        replaceLogbackXml = true
+    }
+}
+
+// Docker image build configuration
+tasks.named("dockerfile") {
+    baseImage = "eclipse-temurin:25-jre"
+}
+
+// Test task configuration
+tasks.withType(org.gradle.api.tasks.testing.AbstractTestTask).configureEach {
+    failOnNoDiscoveredTests = false
+}

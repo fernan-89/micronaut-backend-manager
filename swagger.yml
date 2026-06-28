@@ -1,0 +1,359 @@
+openapi: 3.0.1
+info:
+  title: ThinkLab Manager API
+  description: REST API for managing system users and related operations.
+  contact:
+    name: Development Team
+    email: dev@thinklab.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: "0.1"
+tags:
+- name: User Management
+  description: Operations related to user management
+paths:
+  /users:
+    get:
+      tags:
+      - User Management
+      summary: List all users
+      description: Retrieves all user records from the system.
+      operationId: listAll
+      responses:
+        "200":
+          description: listAll 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserManagementResponse"
+    post:
+      tags:
+      - User Management
+      summary: Create a new user
+      description: Persists a new user record in the system.
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserManagementRequest"
+        required: true
+      responses:
+        "200":
+          description: create 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserManagementResponse"
+  /users/search:
+    get:
+      tags:
+      - User Management
+      summary: Search for a user
+      description: Searches for a user based on multiple optional criteria.
+      operationId: search
+      parameters:
+      - name: companyEmail
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: personalEmail
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: login
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: companyPhone
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: personalPhone
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: search 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserManagementResponse"
+  /users/{userHash}:
+    get:
+      tags:
+      - User Management
+      summary: Find user by hash
+      description: Retrieves user details using their unique identifier.
+      operationId: getByHash
+      parameters:
+      - name: userHash
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getByHash 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserManagementResponse"
+    put:
+      tags:
+      - User Management
+      summary: Update an existing user
+      description: Modifies user profile details and logs the action centrally.
+      operationId: update
+      parameters:
+      - name: userHash
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Executor
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserManagementRequest"
+        required: true
+      responses:
+        "200":
+          description: update 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserManagementResponse"
+    delete:
+      tags:
+      - User Management
+      summary: Delete a user
+      description: Permanently removes a user record from the system.
+      operationId: delete
+      parameters:
+      - name: userHash
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: delete 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+  /users/{userHash}/logs:
+    get:
+      tags:
+      - User Management
+      summary: Get user audit logs
+      description: Retrieves the historical changes for a specific user from the audit
+        collection.
+      operationId: getAuditLogs
+      parameters:
+      - name: userHash
+        in: path
+        description: The unique string hash of the user.
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: A list of AuditLogResponse containing all historical changes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogResponse"
+components:
+  schemas:
+    AuditLogModel.ChangeDetail:
+      required:
+      - from
+      - to
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+      description: Represents the transition of a field value.
+    AuditLogResponse:
+      required:
+      - action
+      - changes
+      - entityHash
+      - executedBy
+      - logHash
+      - timestamp
+      type: object
+      properties:
+        logHash:
+          type: string
+        entityHash:
+          type: string
+        action:
+          type: string
+        changes:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AuditLogModel.ChangeDetail"
+        timestamp:
+          type: string
+          format: date-time
+        executedBy:
+          type: string
+      description: Data Transfer Object representing an audit log entry in the API
+        response.
+    UserManagementRequest:
+      required:
+      - birthDate
+      - company
+      - companyEmail
+      - companyPhone
+      - department
+      - login
+      - name
+      - personalEmail
+      - personalPhone
+      - type
+      type: object
+      properties:
+        name:
+          minLength: 1
+          type: string
+        login:
+          minLength: 1
+          type: string
+        companyPhone:
+          minLength: 1
+          type: string
+        personalPhone:
+          minLength: 1
+          type: string
+        companyEmail:
+          minLength: 1
+          type: string
+          format: email
+        personalEmail:
+          minLength: 1
+          type: string
+          format: email
+        birthDate:
+          type: string
+          format: date
+        department:
+          minLength: 1
+          type: string
+        company:
+          minLength: 1
+          type: string
+        type:
+          $ref: "#/components/schemas/UserManagementTypes"
+        active:
+          type: boolean
+          nullable: true
+      description: Data Transfer Object representing the request payload for creating
+        or updating a user. All fields are validated using Jakarta Validation constraints
+        to ensure data integrity before reaching the business logic layer.
+    UserManagementResponse:
+      required:
+      - active
+      - birthDate
+      - company
+      - companyEmail
+      - companyPhone
+      - createdAt
+      - department
+      - login
+      - name
+      - personalEmail
+      - personalPhone
+      - registration
+      - type
+      - updatedAt
+      - userHash
+      type: object
+      properties:
+        userHash:
+          type: string
+        name:
+          type: string
+        login:
+          type: string
+        companyPhone:
+          type: string
+        personalPhone:
+          type: string
+        companyEmail:
+          type: string
+        personalEmail:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        registration:
+          type: string
+        department:
+          type: string
+        company:
+          type: string
+        active:
+          type: boolean
+        type:
+          $ref: "#/components/schemas/UserManagementTypes"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: Data Transfer Object representing the response payload for user
+        management operations. This record encapsulates the user details returned
+        by the API.
+    UserManagementTypes:
+      type: string
+      description: "Enumeration representing the different operational categories\
+        \ of users within the system. This is used to classify users based on their\
+        \ primary work environment or role, which can be utilized to dictate specific\
+        \ access levels, policies, or business rules."
+      enum:
+      - REMOTE
+      - LOCAL
+      - FACTORY
+      - SERVICE
+      - TEMPORARY
+      x-enum-descriptions:
+      - "Represents a user who primarily operates outside the main corporate facilities,\
+        \ such as field workers, traveling personnel, or work-from-home employees."
+      - Represents a user who primarily operates within the standard corporate office
+        environment.
+      - "Represents a user who primarily operates within the industrial, warehouse,\
+        \ or production facility."
+      - "Represents an automated system, application, or integration account rather\
+        \ than a human user. Used for machine-to-machine communication, automated\
+        \ scripts, and background processes."
+      - "Represents a human user with limited-time access, such as a contractor, intern,\
+        \ consultant, or third-party vendor. These accounts typically require stricter\
+        \ access controls or expiration dates."
