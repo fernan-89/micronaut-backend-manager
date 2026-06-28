@@ -1,7 +1,7 @@
 # ==============================================================================
-# 🏗️ ETAPA 1: COMPILAÇÃO (BUILD) - COM JDK 25
+# 🏗️ ETAPA 1: COMPILAÇÃO (BUILD) - COM JDK 21
 # ==============================================================================
-FROM gradle:jdk25 AS builder
+FROM gradle:8.11-jdk21 AS builder
 
 # Define o diretório de trabalho dentro do container de build
 WORKDIR /home/gradle/project
@@ -10,8 +10,11 @@ WORKDIR /home/gradle/project
 COPY gradle/ gradle/
 COPY build.gradle settings.gradle gradlew ./
 
-# CORREÇÃO CRÍTICA: Copia as propriedades e configurações da CLI para o Gradle ler as versões do Micronaut
+# Copia as propriedades e configurações da CLI para o Gradle ler as versões do Micronaut
 COPY gradle.properties micronaut-cli.yml ./
+
+# CORREÇÃO CRÍTICA: Garante permissão de execução do wrapper dentro do container Linux
+RUN chmod +x gradlew
 
 # Copia o código fonte do ecossistema ThinkLab Manager
 COPY src/ src/
@@ -20,9 +23,9 @@ COPY src/ src/
 RUN ./gradlew shadowJar --no-daemon -x test
 
 # ==============================================================================
-# 🚀 ETAPA 2: EXECUÇÃO (RUNTIME SUPER SEGURO) - COM JRE 25
+# 🚀 ETAPA 2: EXECUÇÃO (RUNTIME SUPER SEGURO) - COM JRE 21
 # ==============================================================================
-FROM eclipse-temurin:25-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 # Cria um usuário do sistema não-root por motivos estritos de segurança de infraestrutura
 RUN useradd -u 1001 -m sre-user
@@ -31,7 +34,7 @@ RUN useradd -u 1001 -m sre-user
 WORKDIR /app
 
 # Copia o JAR otimizado gerado na Etapa 1 para o container de execução
-COPY --from=builder /home/gradle/project/build/libs/thinklab-*-all.jar ./thinklab-manager.jar
+COPY --from=builder /home/gradle/project/build/libs/thinklabmanager-*-all.jar ./thinklab-manager.jar
 
 # Altera a propriedade da pasta para o usuário não-root
 RUN chown -R sre-user:sre-user /app
@@ -47,4 +50,4 @@ ENV MICRONAUT_ENVIRONMENTS=prod \
     MONGO_URI="mongodb://localhost:27017/enterprise-infra-db"
 
 # Comando de inicialização otimizando os parâmetros de memória da JVM para containers
-ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-jar", "thinklab-manager.jar"]
+ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-jar", "thinklab-manager.jar"]

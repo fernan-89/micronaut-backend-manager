@@ -54,7 +54,7 @@ reports/
 # BLOQUEIO CRÍTICO: Protege contra vazamento de tokens e hashes gerados em runtime.
 # Permite apenas os modelos de coleções e ambientes padrões do repositório.
 PostMan-Collection/*.data.json
-PostMan-Collection/*_working_copy.json
+postman/*_working_copy.json
 PostMan-Collection/*.bak
 
 # 📝 System Logs & Temporary Dumps
