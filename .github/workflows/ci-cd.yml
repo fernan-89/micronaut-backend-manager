@@ -23,7 +23,7 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Configura o ambiente Java com a versão correta (JDK 21) e alinhamento corrigido
+      # 2. Configura o ambiente Java com a versão correta (JDK 21)
       - name: ☕ Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -31,15 +31,11 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. Dá permissão de execução para o Gradle Wrapper de forma segura
-      - name: 🔓 Grant Execute Permission to Gradlew
-        run: chmod +x gradlew
-
-      # 4. Executa a compilação e validação estática do código (Gera o shadowJar)
+      # 3. CORREÇÃO CRÍTICA: Executa a compilação usando o Gradle global do ambiente do GitHub (remove o ./ do wrapper)
       - name: 🔨 Compile and Build ShadowJar
-        run: ./gradlew shadowJar --no-daemon -x test
+        run: gradle shadowJar --no-daemon -x test
 
-      # 5. Inicializa a aplicação Micronaut em background usando a nomenclatura exata do rootProject
+      # 4. Inicializa a aplicação Micronaut em background usando a nomenclatura exata do rootProject
       - name: 🟢 Start Micronaut Microservice (Background)
         run: |
           java -jar build/libs/thinklabmanager-*-all.jar &
@@ -49,21 +45,21 @@ jobs:
           MONGO_URI: "mongodb://localhost:27017/enterprise-infra-db"
           MICRONAUT_ENVIRONMENTS: test
 
-      # 6. Configura o Node.js para instalar as ferramentas do Postman
+      # 5. Configura o Node.js para instalar as ferramentas do Postman
       - name: 🟢 Setup Node.js v20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 7. Instala o Newman e o gerador de relatórios visuais HTML corporativos
+      # 6. Instala o Newman e o gerador de relatórios visuais HTML corporativos
       - name: 📦 Install Newman & Extra Reporter
         run: npm install -g newman newman-reporter-htmlextra
 
-      # 8. Cria a pasta para isolar os relatórios gerados
+      # 7. Cria a pasta para isolar os relatórios gerados
       - name: 📁 Create Reports Directory
         run: mkdir -p reports
 
-      # 9. EXECUÇÃO CRÍTICA: Newman roda a sua Collection automatizada testando os Enums e rotas
+      # 8. EXECUÇÃO CRÍTICA: Newman roda a sua Collection automatizada testando os Enums e rotas
       - name: 🧪 Run Automated Postman/Newman E2E Loop
         run: |
           newman run ./PostMan-Collection/Bulk_Asset_Ingestion_Suite.json \
@@ -72,7 +68,7 @@ jobs:
             --reporter-htmlextra-export ./reports/sre-ingestion-report.html \
             --bail
 
-      # 10. Salva o relatório HTML gerado como um artefato do GitHub Actions
+      # 9. Salva o relatório HTML gerado como um artefato do GitHub Actions
       - name: 📊 Upload SRE HTML Test Report
         uses: actions/upload-artifact@v4
         if: always() # Garante que o relatório suba mesmo se os testes falharem (ajuda a debugar)
