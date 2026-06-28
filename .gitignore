@@ -1,16 +1,11 @@
-# Compiled class file
+# ==============================================================================
+# 🚀 THINKLAB MANAGER - CORE ENTERPRISE GITIGNORE
+# ==============================================================================
+
+# 📦 Java & Compiled Artifacts
+# ------------------------------------------------------------------------------
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+*.pyc
 *.jar
 *.war
 *.nar
@@ -18,7 +13,49 @@
 *.zip
 *.tar.gz
 *.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# 🏗️ Gradle Build Tool & Micronaut Outputs
+# ------------------------------------------------------------------------------
+.gradle/
+build/
+bin/
+out/
+.micronaut-cli.yml.tmp
+**/build/
+**/out/
+
+# 💻 IDEs and Editors Configuration (IntelliJ IDEA, VS Code, Eclipse)
+# ------------------------------------------------------------------------------
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+
+# 🧪 Postman & Newman Local Execution Security
+# ------------------------------------------------------------------------------
+# Impede o commit acidental de relatórios gerados pelo htmlextra
+reports/
+*.html
+
+# BLOQUEIO CRÍTICO: Protege contra vazamento de tokens e hashes gerados em runtime.
+# Permite apenas os modelos de coleções e ambientes padrões do repositório.
+PostMan-Collection/*.data.json
+PostMan-Collection/*_working_copy.json
+PostMan-Collection/*.bak
+
+# 📝 System Logs & Temporary Dumps
+# ------------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
