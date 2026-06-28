@@ -90,9 +90,3 @@ Our audit strategy relies on the `AuditLogModel`, which captures changes as a ma
 1. **Header Requirement**: Always provide the `X-Executor` header on `PUT` requests to identify the entity performing the change.
 2. **Partial Updates**: The API handles nulls gracefully. Only send the fields you wish to modify.
 3. **Documentation**: Maintain all new public methods and classes with Javadoc comments in English to ensure clarity and consistency across the team.
-
----
-
-*Developed with excellence to ensure system robustness.*
-
-```
